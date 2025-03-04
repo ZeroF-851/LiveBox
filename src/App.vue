@@ -112,7 +112,7 @@
         <template #footer>
             <div class="dialog-footer">
                 <el-button @click="dialogVisible = false">取消</el-button>
-                <el-button type="primary" @click="dialogVisible = false">
+                <el-button type="primary" @click="saveSettings">
                     确定
                 </el-button>
             </div>
@@ -135,6 +135,7 @@ import Flv from 'flv.js'
 import pako from 'pako'
 import SocketCli from '@/utils/RustSocket'
 import { emit, listen } from '@tauri-apps/api/event'
+import axios from 'axios'
 
 // 直播间地址
 const inputUrl = ref(localStorage.getItem('url') || '')
@@ -180,6 +181,20 @@ const liveMsg = ref()
 let dplayer: DPlayerImp | null = null
 let liveNum = 100
 
+// 推送消息方法
+const pushMessage = async (type: string, data: any) => {
+  if (!pushUrl.value || !checkList.value.includes(type)) return
+  
+  try {
+    await axios.post(pushUrl.value, {
+      type,
+      data,
+      timestamp: Date.now()
+    })
+  } catch (err) {
+    console.error('推送消息失败:', err)
+  }
+}
 // 新窗口
 const openWindow = () => {
     invoke('open_window', {
@@ -485,6 +500,11 @@ const decodeChat = (data) => {
         msg: content,
     }
     checkList.value.includes('chat') && messageList.value.push(message)
+    checkList.value.includes('chat') && pushMessage('chat', {
+        user: user.nickName,
+        content: content,
+        msgId: common.msgId
+    })
     // console.log('chatMsg---', user.nickName, content)
 }
 // 解析礼物消息
@@ -500,6 +520,13 @@ const decodeGift = (data) => {
     checkList.value.includes('gift') && messageList.value.push(message)
     // 计算主播收益
     diamond.value = diamond.value + gift.diamondCount * repeatCount
+    
+    checkList.value.includes('gift') && pushMessage('gift', {
+        user: user.nickName,
+        gift: gift.name,
+        count: repeatCount,
+        diamonds: gift.diamondCount * repeatCount
+    })
 }
 
 // 进入房间
@@ -513,6 +540,11 @@ const enterLive = (data) => {
     }
     checkList.value.includes('comein') && messageList.value.push(message)
     // console.log('enterLive---', enteryMsg)
+    
+    checkList.value.includes('comein') && pushMessage('comein', {
+        user: user.nickName,
+        action: '进入直播间'
+    })
 }
 
 // 点赞消息
@@ -530,6 +562,11 @@ const likeLive = (data) => {
         totalLike: total,
     }
     checkList.value.includes('like') && messageList.value.push(message)
+    
+    checkList.value.includes('like') && pushMessage('like', {
+        user: user.nickName,
+        total: total
+    })
 }
 
 // 关注主播
@@ -546,6 +583,11 @@ const followLive = (data) => {
         fans: followCount,
     }
     checkList.value.includes('follow') && messageList.value.push(message)
+    
+    checkList.value.includes('follow') && pushMessage('follow', {
+        user: user.nickName,
+        followCount: followCount
+    })
 }
 
 // 直播间统计
