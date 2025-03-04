@@ -15,3 +15,15 @@ export interface MessageImp {
     name: string
     msg: string
 }
+
+export interface PushMessage {
+    type: 'chat' | 'gift' | 'like' | 'follow' | 'comein'
+    data: any
+    timestamp: number
+  }
+  
+  export interface RecordConfig {
+    video: boolean
+    chat: boolean
+    gift: boolean
+  }
